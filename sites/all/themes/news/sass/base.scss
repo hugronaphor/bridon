@@ -1,0 +1,145 @@
+/**
+ * @file
+ * Styles are organized using the SMACSS technique. @see http://smacss.com/book/
+ *
+ * When you turn on CSS aggregation at admin/config/development/performance, all
+ * of these @include files will be combined into a single file.
+ */
+
+/* Import Sass mixins, variables, Compass modules, etc. */
+@import "init";
+
+/* HTML element (SMACSS base) rules */
+@import "normalize";
+
+/* Component (SMACSS module) rules */
+@import "components/misc";
+
+// Optionally, add your own components here.
+@import "print";
+
+/* SMACSS theme rules */
+/* @import "theme-A"; */
+/* @import "theme-B"; */
+
+input[type=radio], input[type=checkbox] {
+  display:none;
+}
+input[type=radio] + label:before {
+  content: "";  
+  display: inline-block;  
+  width: 15px;  
+  height: 15px;  
+  vertical-align:middle;
+  margin-right: 2px;  
+  background-color: #aaa;  
+  box-shadow: inset 0px 2px 2px rgba(0, 0, 0, .3);
+  border-radius: 8px;  
+}
+input[type=checkbox] + label:before {
+  content: "";  
+  display: inline-block;  
+  width: 15px;  
+  height: 15px;  
+  vertical-align:middle;
+  margin-right: 3px;  
+  background-color: #aaa;  
+  box-shadow: inset 0px 2px 2px rgba(0, 0, 0, .3);
+  border-radius: 4px;  
+}
+
+input[type=radio]:checked + label:before {
+  content: "\2022"; /* Bullet */
+  color:white;
+  background-color: #666; 
+  font-size:1.8em;
+  text-align:center;
+  line-height:14px;
+  text-shadow:0px 0px 3px #eee;
+}
+input[type=checkbox]:checked + label:before {
+  content:"\2714"; /* Tick */
+  color:white;
+  background-color: #666; 
+  text-align:center;
+  line-height:15px;
+  text-shadow:0px 0px 3px #eee;
+}
+
+input[type=submit] {
+  background:#f78096;
+  background: -moz-linear-gradient(top,#f78096 0%,#f56778 100%);
+  background: -webkit-gradient(linear,left top,left bottom,color-stop(0%,#f78096),color-stop(100%,#f56778));
+  background: -webkit-linear-gradient(top,#f78096 0%,#f56778 100%);
+  background: -o-linear-gradient(top,#f78096 0%,#f56778 100%);
+  background: -ms-linear-gradient(top,#f78096 0%,#f56778 100%);
+  //filter: progid: DXImageTransform.Microsoft.gradient( startColorstr='#f78096',endColorstr='#f78096',GradientType=0);
+  padding:5px 45px;
+  color:#fff;
+  font-family:'Helvetica Neue',sans-serif;
+  font-size:17px;
+  border-radius:4px;
+  -moz-border-radius:4px;
+  -webkit-border-radius:4px;
+  border:1px solid #ae4553;
+  clear:both;
+  margin: 10px 0 0 0
+}
+
+#the-main {
+  width: 80%;
+  margin: 0 auto;
+  padding: 20px;
+  #preferences-form {
+    #main-result-list {
+      border-top: 2px solid #6fc1af;
+      margin-top: 29px;
+    }
+    article {
+      h2.article-title {
+        margin: 7px 0;
+        a {
+          text-decoration: none;
+          color: #f56778;
+          padding: 0;
+        }
+
+      }
+      .summary {
+        font-size: 15px;
+      }
+    }
+    #edit-text {
+      border: 1px solid #ddd;
+      width: 100%;
+      padding: 8px 7px;
+      margin: 5px 0;
+      color: #333;
+    }
+    //display: none;
+    .form-type-checkboxes, .form-type-radios {
+      float: left;
+      width: 50%;
+      .form-item-sentiment, .form-type-checkbox {
+        display: inline-block;
+        padding-right: 5px;
+      }
+      .optionfield-languages-label, .optionfield-sentiment-label {
+        margin: 1px 3px;
+      }
+    }
+    .form-type-radios {
+
+    }
+    .field-languages-label, .field-sentiment-label {
+      border-bottom: 1px solid black;
+      padding: 5px 5px 0px 0;
+      margin-bottom: 5px;
+    }
+    #edit-languages, #edit-sentiment {
+      border: 1px solid #ddd;
+      padding: 3px;
+      margin-top: 3px;
+    }
+  }
+}

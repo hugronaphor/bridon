@@ -1,0 +1,207 @@
+<?php
+
+/**
+ * @file
+ * Main module file.
+ */
+define('IDOL_API_KEY', '6ab3604c-1135-4356-8e89-8f471ddeb6d5');
+
+/**
+ * Implements hook_block_info().
+ */
+function news_core_block_info() {
+  $blocks = array();
+
+  $blocks['preferences_form'] = array(
+    'info' => t('Preferences form block'),
+    'cache' => DRUPAL_CACHE_GLOBAL,
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function news_core_block_view($delta = '') {
+  $block = array();
+
+  switch ($delta) {
+    case 'preferences_form':
+      $block['content'] = drupal_get_form('preferences_form');
+      break;
+  }
+
+  return $block;
+}
+
+/**
+ * @todo: Keep selected values in cache.
+ */
+function preferences_form($form, &$form_state) {
+
+  $form['#method'] = 'post';
+  $form['#tree'] = TRUE;
+
+  $form['text'] = array(
+    '#type' => 'textfield',
+    '#default_value' => variable_get('form_param_text', ''),
+    '#size' => 60,
+    '#maxlength' => 128,
+    '#required' => FALSE,
+  );
+
+  $form['languages'] = array(
+    '#type' => 'checkboxes',
+    '#options' => ['news_eng' => 'Eng', 'news_fra' => 'Fra', 'news_ger' => 'Ger', 'news_ita' => 'Ita'],
+    '#default_value' => variable_get('form_param_languages', []),
+    '#title' => t('Languages'),
+  );
+
+  $active = array('all' => t('Doesn\'t matter'), 'positive' => t('Positive'), 'negative' => t('Negative'));
+  $form['sentiment'] = array(
+    '#type' => 'radios',
+    '#title' => t('Mood'),
+    '#default_value' => variable_get('form_param_sentiment', 'all'),
+    '#options' => $active,
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Find'),
+  );
+
+  // Ohh no, night time ..
+  $param['languages'] = variable_get('form_param_languages', []);
+  $param['text'] = variable_get('form_param_text', []);
+  $param['sentiment'] = variable_get('form_param_sentiment', 'all');
+
+  $form['results'] = array(
+    '#markup' => _get_news_results($param),
+    '#prefix' => '<div id="main-result-list">',
+    '#suffix' => '</div>'
+  );
+
+  return $form;
+}
+
+/**
+ * Simulate GET parameters from URL.
+ * @param type $form
+ * @param type $form_state
+ */
+function preferences_form_submit($form, &$form_state) {
+  $param = [];
+  if (!empty($form_state['input']['languages'])) {
+    $param['languages'] = $form_state['input']['languages'];
+    variable_set('form_param_languages', $param['languages']);
+  }
+
+  if (!empty($form_state['input']['text'])) {
+    $param['text'] = $form_state['input']['text'];
+    variable_set('form_param_text', $param['text']);
+  }
+
+  if (!empty($form_state['input']['sentiment'])) {
+    $param['sentiment'] = $form_state['input']['sentiment'];
+    variable_set('form_param_sentiment', $param['sentiment']);
+  }
+}
+
+function _get_remote_data($url) {
+  $response = file_get_contents($url);
+
+  if ($response) {
+    return drupal_json_decode($response);
+  }
+}
+
+/**
+ * @todo: get news using template.
+ */
+function _get_news_results($param) {
+  $url = _build_main_url($param);
+  $json = _get_remote_data($url);
+  if (!empty($json['documents'])) {
+    $indexes = $json['documents'];
+    $total = $json['totalhits'];
+  }
+
+  #dsm($indexes, '$indexes');
+
+  if (isset($param['sentiment']) && $param['sentiment'] != 'all') {
+    // Filter results.
+    foreach ($indexes as $key => $index) {
+      $sentiment_url = _build_sentiment_url($index['summary']);
+      $sentiment_response = _get_remote_data($sentiment_url);
+
+      // Keep neutral mood.
+      if ($param['sentiment'] == 'positive' && $sentiment_response['aggregate']['sentiment'] == 'negative') {
+        unset($indexes[$key]);
+      }
+      if ($param['sentiment'] == 'negative' && $sentiment_response['aggregate']['sentiment'] == 'positive') {
+        unset($indexes[$key]);
+      }
+    }
+  }
+
+  $vars['total'] = $total;
+  $vars['results'] = $indexes;
+
+  return theme('news_main_list', $vars);
+}
+
+/**
+ * Build the query url.
+ */
+function _build_main_url($vals) {
+
+  $baseUrl = 'https://api.idolondemand.com/1/api/sync/querytextindex/v1';
+
+  $params = [];
+  $params['apikey'] = IDOL_API_KEY;
+  $params['max_page_results'] = 20;
+  $params['total_results'] = 'true';
+  $params['summary'] = 'concept';
+
+  $languages = !empty($vals['languages']) ? $vals['languages'] : FALSE;
+  $query_indexes = $languages ? '&indexes=' . implode('&indexes=', array_keys($languages)) : '';
+
+  // Stick to the 'news' keyword, as the text query is required.
+  $params['text'] = !empty($vals['text']) ? $vals['text'] : 'news';
+
+
+  $url = url($baseUrl, ['query' => $params]) . $query_indexes;
+  dsm($url);
+  return $url;
+}
+
+/**
+ * Build the sentiment query url.
+ */
+function _build_sentiment_url($text) {
+  $baseUrl = 'https://api.idolondemand.com/1/api/sync/analyzesentiment/v1';
+
+  $params = [];
+  $params['apikey'] = IDOL_API_KEY;
+  // Just in case.
+  if (empty($text)) {
+    return FALSE;
+  }
+  $params['text'] = urlencode($text);
+  $url = url($baseUrl, ['query' => $params]);
+  return $url;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function news_core_theme($existing, $type, $theme, $path) {
+  return array(
+    'news_main_list' => array(
+      'template' => 'news-main-list',
+      'arguments' => array('vars' => NULL),
+      'path' => $path . '/theme',
+    ),
+  );
+}
