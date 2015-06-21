@@ -43,6 +43,10 @@ function preferences_form($form, &$form_state) {
   $form['#method'] = 'post';
   $form['#tree'] = TRUE;
 
+  if (!empty($_GET['search'])) {
+    variable_set('form_param_text', $_GET['search']);
+  }
+
   $form['text'] = array(
     '#type' => 'textfield',
     '#default_value' => variable_get('form_param_text', ''),
@@ -87,8 +91,6 @@ function preferences_form($form, &$form_state) {
 
 /**
  * Simulate GET parameters from URL.
- * @param type $form
- * @param type $form_state
  */
 function preferences_form_submit($form, &$form_state) {
   $param = [];
@@ -116,9 +118,6 @@ function _get_remote_data($url) {
   }
 }
 
-/**
- * @todo: get news using template.
- */
 function _get_news_results($param) {
   $url = _build_main_url($param);
   $json = _get_remote_data($url);
@@ -127,10 +126,8 @@ function _get_news_results($param) {
     $total = $json['totalhits'];
   }
 
-  #dsm($indexes, '$indexes');
-
+  // Filter results.
   if (isset($param['sentiment']) && $param['sentiment'] != 'all') {
-    // Filter results.
     foreach ($indexes as $key => $index) {
       $sentiment_url = _build_sentiment_url($index['summary']);
       $sentiment_response = _get_remote_data($sentiment_url);
@@ -145,10 +142,49 @@ function _get_news_results($param) {
     }
   }
 
+  foreach ($indexes as $res_key => $index) {
+    $url_entities = _build_entityextract_url($index['summary']);
+    $related_entities_response = _get_remote_data($url_entities);
+    if (empty($related_entities_response['entities'])) {
+      continue;
+    }
+    $entity_types = [];
+    foreach ($related_entities_response['entities'] as $key => $res) {
+      // Clean representation.
+      preg_match('~([A-z0-9]+)_~Usmi', $res['type'], $match);
+      if (!empty($match[1])) {
+        $clean_entity = ucfirst($match[1]);
+        $entity_types[$clean_entity][] = $res['normalized_text'];
+      }
+    }
+
+    // Clean-up.
+    foreach ($entity_types as $key => $entity_type) {
+      $entity_types[$key] = array_unique($entity_type);
+    }
+
+    $indexes[$res_key]['more_entities'] = $entity_types;
+  }
+
   $vars['total'] = $total;
   $vars['results'] = $indexes;
 
   return theme('news_main_list', $vars);
+}
+
+function _build_entityextract_url($text) {
+  $baseUrl = 'https://api.idolondemand.com/1/api/sync/extractentities/v1';
+
+  $params = [];
+  $params['apikey'] = IDOL_API_KEY;
+  // Just in case.
+  if (empty($text)) {
+    return FALSE;
+  }
+  $params['text'] = urlencode($text);
+  $entity_types = '&entity_type=people_eng&entity_type=places_eng&entity_type=companies_eng&entity_type=organizations&entity_type=languages&entity_type=drugs_eng&entity_type=professions&entity_type=universities&entity_type=profanities&entity_type=films';
+  $url = url($baseUrl, ['query' => $params]) . $entity_types;
+  return $url;
 }
 
 /**
@@ -170,9 +206,7 @@ function _build_main_url($vals) {
   // Stick to the 'news' keyword, as the text query is required.
   $params['text'] = !empty($vals['text']) ? $vals['text'] : 'news';
 
-
   $url = url($baseUrl, ['query' => $params]) . $query_indexes;
-  dsm($url);
   return $url;
 }
 
@@ -204,4 +238,30 @@ function news_core_theme($existing, $type, $theme, $path) {
       'path' => $path . '/theme',
     ),
   );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function news_core_menu() {
+  $items['request/get/entityextract/%'] = array(
+    'page callback' => '_news_core_entityextract_get_ajax',
+    'page arguments' => array(3),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('access content'),
+  );
+
+  return $items;
+}
+
+function _news_core_entityextract_get_ajax($text) {
+  $url = _build_entityextract_url($text);
+  $json = _get_remote_data($url);
+  if ($node) {
+    $node_view = node_view($node, $view_mode);
+    print render($node_view);
+    drupal_page_footer();
+    return;
+  }
+  drupal_not_found();
 }
