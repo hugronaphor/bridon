@@ -89,7 +89,7 @@ input[type=submit],
   max-width: 100%;
 }
 .more-like-this {
-  margin: 10px 0;
+  margin: 19px 0 1px 0;
   text-align: center;
   .more-like-this-button {
     background:#6fc1af;
@@ -151,7 +151,7 @@ input[type=submit],
       }
     }
     .form-item-text {
-      display: none;
+      //display: none;
       margin: 15px 0;
       #edit-text {
         border: 1px solid #ddd;

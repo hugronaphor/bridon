@@ -11,7 +11,7 @@
       $('.more-like-this-button').on("click", function() {
         var btn = $(this);
         var parentWrapper = btn.parents('article');
-        
+
         btn.slideUp(0, function() {
           parentWrapper.find('.expand-entities').slideDown(200);
         });

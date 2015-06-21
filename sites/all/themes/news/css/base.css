@@ -1329,7 +1329,7 @@ input[type=submit],
 }
 
 .more-like-this {
-  margin: 10px 0;
+  margin: 19px 0 1px 0;
   text-align: center;
 }
 .more-like-this .more-like-this-button {
@@ -1388,7 +1388,6 @@ input[type=submit],
   font-size: 15px;
 }
 #the-main #preferences-form .form-item-text {
-  display: none;
   margin: 15px 0;
 }
 #the-main #preferences-form .form-item-text #edit-text {
